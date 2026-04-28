@@ -1,0 +1,2864 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AquaTrace IoT Dashboard</title>
+<style>
+:root, [data-theme="dark"] {
+  --bg-page: #0f0e0c;
+  --bg-panel: rgba(18, 16, 11, 0.94);
+  --bg-panel-strong: rgba(12, 11, 8, 0.98);
+  --bg-input: #0d0c08;
+  --bg-hover: #171309;
+  --border-main: #3a2e18;
+  --border-soft: #2a2016;
+  --text-logo: #e6a820;
+  --text-logo-sub: #8a7a5a;
+  --text-sub: #5a5040;
+  --text-label: #7a6840;
+  --text-main: #d4a830;
+  --text-good: #7adda0;
+  --text-water: #31c7e8;
+  --text-bad: #d06c4d;
+  --text-warn: #e0a240;
+  --shadow: rgba(0, 0, 0, 0.42);
+  --toggle-bg: #1a1610;
+  --toggle-border: #3a2e18;
+  --toggle-icon: #c8901a;
+  --toggle-hover: #2a2016;
+  --toggle-text: #8a7850;
+}
+
+[data-theme="light"] {
+  --bg-page: #ddd4be;
+  --bg-panel: rgba(248, 241, 226, 0.97);
+  --bg-panel-strong: rgba(242, 232, 214, 0.98);
+  --bg-input: #f2e8d6;
+  --bg-hover: #eadbb8;
+  --border-main: #b89050;
+  --border-soft: #c8a860;
+  --text-logo: #7a5008;
+  --text-logo-sub: #6a5828;
+  --text-sub: #7a6438;
+  --text-label: #6a5220;
+  --text-main: #4a3208;
+  --text-good: #185a30;
+  --text-water: #107c9a;
+  --text-bad: #8a3222;
+  --text-warn: #8a5a10;
+  --shadow: rgba(80, 54, 15, 0.18);
+  --toggle-bg: #ecdcb8;
+  --toggle-border: #b89050;
+  --toggle-icon: #7a5008;
+  --toggle-hover: #e0d0a8;
+  --toggle-text: #6a5828;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  min-height: 100%;
+  background: var(--bg-page);
+  transition: background 0.4s ease;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg-page);
+  color: var(--text-main);
+  font-family: "Courier New", monospace;
+  overflow-x: hidden;
+  transition: background 0.4s ease, color 0.4s ease;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+#bgCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.scanline,
+.pulse-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.scanline {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(49, 199, 232, 0.035) 49%,
+    rgba(122, 221, 160, 0.035) 50%,
+    transparent 51%
+  );
+  background-size: 100% 8px;
+  animation: scanShift 8s linear infinite;
+  opacity: 0.68;
+}
+
+.pulse-grid {
+  background-image:
+    linear-gradient(rgba(49, 199, 232, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(230, 168, 32, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at center, black, transparent 78%);
+  animation: gridDrift 18s linear infinite;
+}
+
+@keyframes scanShift {
+  from { transform: translateY(-8px); }
+  to { transform: translateY(8px); }
+}
+
+@keyframes gridDrift {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 48px 48px, 48px 48px; }
+}
+
+#themeToggle {
+  position: fixed;
+  top: 18px;
+  right: 20px;
+  z-index: 200;
+  background: var(--toggle-bg);
+  border: 1px solid var(--toggle-border);
+  border-radius: 20px;
+  padding: 7px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--toggle-icon);
+  transition: background 0.3s, border-color 0.3s, color 0.3s, transform 0.2s;
+  user-select: none;
+}
+
+#themeToggle:hover {
+  background: var(--toggle-hover);
+  transform: translateY(-1px);
+}
+
+#themeToggle .t-icon {
+  font-size: 15px;
+  transition: transform 0.6s ease;
+  display: inline-block;
+}
+
+#themeToggle:hover .t-icon {
+  transform: rotate(30deg);
+}
+
+#themeToggle .t-label {
+  color: var(--toggle-text);
+  font-size: 10px;
+}
+
+.t-track {
+  width: 34px;
+  height: 18px;
+  background: var(--toggle-border);
+  border-radius: 9px;
+  position: relative;
+  transition: background 0.3s;
+  flex-shrink: 0;
+}
+
+.t-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--toggle-icon);
+  transition: left 0.3s ease, background 0.3s;
+}
+
+[data-theme="light"] .t-thumb {
+  left: 19px;
+}
+
+.dashboard {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 254px minmax(0, 1fr);
+}
+
+.sidebar {
+  min-height: 100vh;
+  padding: 24px 18px;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-main);
+  box-shadow: 18px 0 42px var(--shadow);
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--border-main);
+  border-radius: 50%;
+  position: relative;
+  background: radial-gradient(circle, var(--bg-input), var(--bg-panel-strong));
+  animation: brandTurn 12s linear infinite;
+}
+
+.brand-mark::before,
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+}
+
+.brand-mark::before {
+  inset: 8px;
+  border: 1px dashed var(--text-water);
+}
+
+.brand-mark::after {
+  inset: 16px;
+  background: var(--text-logo);
+  box-shadow: 0 0 16px rgba(230, 168, 32, 0.45);
+}
+
+@keyframes brandTurn {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.brand-title {
+  color: var(--text-logo);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.brand-title span {
+  color: var(--text-logo-sub);
+}
+
+.brand-sub {
+  color: var(--text-sub);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+
+.nav {
+  display: grid;
+  gap: 8px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.nav button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 0 11px;
+  background: transparent;
+  color: var(--text-label);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: 10px;
+  transition: background 0.25s, border-color 0.25s, color 0.25s, transform 0.25s;
+}
+
+.nav button:hover,
+.nav button.active {
+  background: var(--bg-hover);
+  border-color: var(--border-main);
+  color: var(--text-logo);
+  transform: translateX(4px);
+}
+
+.nav-code {
+  color: var(--text-sub);
+  font-size: 9px;
+}
+
+.system-card {
+  margin-top: 22px;
+  padding: 16px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-panel-strong);
+  position: relative;
+  overflow: hidden;
+}
+
+.system-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -70%;
+  width: 55%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(49, 199, 232, 0.13), transparent);
+  animation: panelSweep 5s ease-in-out infinite;
+}
+
+@keyframes panelSweep {
+  0%, 35% { left: -70%; }
+  70%, 100% { left: 120%; }
+}
+
+.system-card h3 {
+  color: var(--text-good);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.signal {
+  display: flex;
+  align-items: end;
+  gap: 4px;
+  height: 42px;
+  margin-bottom: 14px;
+}
+
+.signal span {
+  width: 12px;
+  background: var(--text-water);
+  opacity: 0.35;
+  animation: signalLift 1.4s ease-in-out infinite;
+}
+
+.signal span:nth-child(1) { height: 20%; animation-delay: 0s; }
+.signal span:nth-child(2) { height: 42%; animation-delay: 0.1s; }
+.signal span:nth-child(3) { height: 62%; animation-delay: 0.2s; }
+.signal span:nth-child(4) { height: 82%; animation-delay: 0.3s; }
+.signal span:nth-child(5) { height: 100%; animation-delay: 0.4s; }
+
+@keyframes signalLift {
+  0%, 100% { opacity: 0.35; transform: scaleY(0.75); }
+  50% { opacity: 1; transform: scaleY(1); }
+}
+
+.system-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-label);
+  font-size: 10px;
+  letter-spacing: 1px;
+  line-height: 1.8;
+}
+
+.system-row strong {
+  color: var(--text-main);
+  font-weight: 400;
+}
+
+.main {
+  min-width: 0;
+  padding: 24px 28px 36px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 150px 20px 0;
+  border-bottom: 1px solid var(--border-main);
+}
+
+.page-kicker {
+  color: var(--text-sub);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.page-title {
+  color: var(--text-logo);
+  font-size: clamp(22px, 3vw, 34px);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 7px;
+  line-height: 1.1;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.status-pill,
+.action-btn {
+  min-height: 36px;
+  border: 1px solid var(--border-main);
+  border-radius: 3px;
+  background: var(--bg-panel);
+  color: var(--text-label);
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.action-btn {
+  cursor: pointer;
+  color: var(--text-logo);
+  transition: background 0.25s, transform 0.25s, border-color 0.25s;
+}
+
+.action-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-logo);
+  transform: translateY(-2px);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-good);
+  box-shadow: 0 0 12px var(--text-good);
+  animation: dotPulse 1.6s ease-in-out infinite;
+}
+
+.dot.warn {
+  background: var(--text-warn);
+  box-shadow: 0 0 12px var(--text-warn);
+}
+
+.dot.bad {
+  background: var(--text-bad);
+  box-shadow: 0 0 12px var(--text-bad);
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.82); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.metric-card,
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-main);
+  border-radius: 4px;
+  box-shadow: 0 22px 40px var(--shadow);
+  transition: background 0.4s, border-color 0.4s, transform 0.25s;
+}
+
+.metric-card {
+  min-height: 142px;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  animation: riseIn 0.75s ease both;
+}
+
+.metric-card:nth-child(2) { animation-delay: 0.08s; }
+.metric-card:nth-child(3) { animation-delay: 0.16s; }
+.metric-card:nth-child(4) { animation-delay: 0.24s; }
+
+.metric-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--text-water);
+}
+
+.metric-card::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--text-water), transparent);
+  animation: lineRun 3.5s linear infinite;
+}
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lineRun {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+.metric-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-label);
+  font-size: 10px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+}
+
+.metric-icon {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border-main);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--text-water);
+  animation: iconSpin 10s linear infinite;
+}
+
+@keyframes iconSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.metric-value {
+  color: var(--text-logo);
+  font-size: clamp(26px, 4vw, 38px);
+  letter-spacing: 2px;
+  margin-top: 14px;
+}
+
+.metric-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-sub);
+  font-size: 10px;
+  letter-spacing: 1px;
+  margin-top: 10px;
+}
+
+.spark {
+  width: 86px;
+  height: 24px;
+  display: flex;
+  align-items: end;
+  gap: 4px;
+}
+
+.spark span {
+  flex: 1;
+  background: var(--text-water);
+  opacity: 0.5;
+  animation: spark 1.8s ease-in-out infinite;
+}
+
+.spark span:nth-child(1) { height: 28%; animation-delay: 0s; }
+.spark span:nth-child(2) { height: 66%; animation-delay: 0.1s; }
+.spark span:nth-child(3) { height: 44%; animation-delay: 0.2s; }
+.spark span:nth-child(4) { height: 88%; animation-delay: 0.3s; }
+.spark span:nth-child(5) { height: 58%; animation-delay: 0.4s; }
+.spark span:nth-child(6) { height: 78%; animation-delay: 0.5s; }
+
+@keyframes spark {
+  0%, 100% { transform: scaleY(0.75); opacity: 0.45; }
+  50% { transform: scaleY(1.05); opacity: 1; }
+}
+
+.layout-grid {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.95fr) minmax(0, 1.35fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.panel {
+  min-width: 0;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-top: 1px solid rgba(49, 199, 232, 0.18);
+  pointer-events: none;
+}
+
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.panel-title {
+  color: var(--text-good);
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.panel-sub {
+  color: var(--text-sub);
+  font-size: 10px;
+  letter-spacing: 1px;
+  margin-top: 5px;
+  line-height: 1.5;
+}
+
+.safe-panel {
+  min-height: 440px;
+}
+
+.safe-meter-wrap,
+.speed-meter-wrap {
+  position: relative;
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+}
+
+#safeMeter,
+#speedMeter {
+  width: 100%;
+  max-width: 430px;
+  aspect-ratio: 1 / 0.78;
+}
+
+.meter-center {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.meter-value {
+  color: var(--text-main);
+  font-size: clamp(34px, 5vw, 50px);
+  font-weight: 300;
+  letter-spacing: 2px;
+}
+
+.meter-unit {
+  color: var(--text-sub);
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.safe-badge {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-input);
+  color: var(--text-good);
+  padding: 8px 10px;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.safe-badge.warn {
+  color: var(--text-warn);
+}
+
+.safe-badge.bad {
+  color: var(--text-bad);
+}
+
+.quality-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.quality-row {
+  border: 1px solid var(--border-soft);
+  background: var(--bg-input);
+  padding: 12px;
+}
+
+.quality-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-label);
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.quality-value {
+  color: var(--text-main);
+  font-size: 18px;
+  margin-top: 8px;
+}
+
+.mini-bar {
+  height: 8px;
+  margin-top: 10px;
+  border: 1px solid var(--border-main);
+  overflow: hidden;
+}
+
+.mini-bar span {
+  display: block;
+  height: 100%;
+  width: var(--fill);
+  background: linear-gradient(90deg, var(--text-water), var(--text-good));
+  animation: fillGrow 1.5s ease both;
+}
+
+.mini-bar.warn span {
+  background: linear-gradient(90deg, #7a5008, var(--text-warn));
+}
+
+.mini-bar.bad span {
+  background: linear-gradient(90deg, #7a2d20, var(--text-bad));
+}
+
+@keyframes fillGrow {
+  from { width: 0; }
+  to { width: var(--fill); }
+}
+
+.chart-wrap {
+  position: relative;
+  height: 288px;
+  border: 1px solid var(--border-soft);
+  background:
+    linear-gradient(rgba(49, 199, 232, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(122, 221, 160, 0.035) 1px, transparent 1px),
+    var(--bg-input);
+  background-size: 100% 25%, 12.5% 100%, auto;
+  overflow: hidden;
+}
+
+#particleChart {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.chart-readout {
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  pointer-events: none;
+}
+
+.readout-item {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-main);
+  padding: 6px 8px;
+  color: var(--text-label);
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.readout-item strong {
+  color: var(--text-logo);
+  font-weight: 400;
+}
+
+.weather-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.15fr);
+  gap: 16px;
+}
+
+.thermometer-box {
+  min-height: 344px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-input);
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px;
+  align-items: center;
+}
+
+.thermometer {
+  width: 42px;
+  height: 250px;
+  border: 1px solid var(--border-main);
+  border-radius: 24px;
+  margin: 0 auto;
+  position: relative;
+  background: rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.thermometer::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 14px;
+  height: var(--temp-fill);
+  border-radius: 18px;
+  background: linear-gradient(0deg, var(--text-water), var(--text-good), var(--text-warn));
+  box-shadow: 0 0 18px rgba(49, 199, 232, 0.38);
+  transition: height 1s ease;
+  animation: tempPulse 2.8s ease-in-out infinite;
+}
+
+.thermometer::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--text-water);
+  box-shadow: 0 0 18px rgba(49, 199, 232, 0.45);
+}
+
+@keyframes tempPulse {
+  0%, 100% { filter: brightness(0.95); }
+  50% { filter: brightness(1.18); }
+}
+
+.temperature-value {
+  color: var(--text-logo);
+  font-size: clamp(38px, 6vw, 58px);
+  letter-spacing: 2px;
+}
+
+.temperature-meta {
+  color: var(--text-sub);
+  font-size: 10px;
+  letter-spacing: 1px;
+  line-height: 1.8;
+  margin-top: 8px;
+}
+
+.weather-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.locality-input {
+  min-height: 36px;
+  min-width: 170px;
+  flex: 1;
+  border: 1px solid var(--border-main);
+  background: var(--bg-panel);
+  color: var(--text-main);
+  padding: 0 10px;
+  outline: none;
+}
+
+.weather-list {
+  display: grid;
+  gap: 10px;
+}
+
+.weather-item,
+.event-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-input);
+  animation: itemGlow 4s ease-in-out infinite;
+}
+
+.weather-item:nth-child(2),
+.event-item:nth-child(2) { animation-delay: 0.4s; }
+.weather-item:nth-child(3),
+.event-item:nth-child(3) { animation-delay: 0.8s; }
+.event-item:nth-child(4) { animation-delay: 1.2s; }
+
+@keyframes itemGlow {
+  0%, 100% { border-color: var(--border-soft); }
+  50% { border-color: var(--border-main); }
+}
+
+.weather-code,
+.event-code {
+  color: var(--text-logo);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.weather-text,
+.event-text {
+  min-width: 0;
+}
+
+.weather-text strong,
+.event-text strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 11px;
+  letter-spacing: 1px;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.weather-text span,
+.event-text span {
+  display: block;
+  color: var(--text-sub);
+  font-size: 9px;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+.tag {
+  border: 1px solid var(--border-main);
+  color: var(--text-good);
+  padding: 5px 7px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tag.warn {
+  color: var(--text-warn);
+}
+
+.tag.bad {
+  color: var(--text-bad);
+}
+
+.bottom-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.82fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.sample-map {
+  min-height: 324px;
+  border: 1px solid var(--border-soft);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(49, 199, 232, 0.18), transparent 26%),
+    radial-gradient(circle at 76% 62%, rgba(122, 221, 160, 0.14), transparent 22%),
+    var(--bg-input);
+  position: relative;
+  overflow: hidden;
+}
+
+.water-wave {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  height: 70px;
+  border: 1px solid rgba(49, 199, 232, 0.25);
+  border-radius: 50%;
+  animation: waveMove 6s ease-in-out infinite;
+}
+
+.water-wave:nth-child(1) { top: 34%; animation-delay: 0s; }
+.water-wave:nth-child(2) { top: 48%; animation-delay: 1s; }
+.water-wave:nth-child(3) { top: 62%; animation-delay: 2s; }
+
+@keyframes waveMove {
+  0%, 100% { transform: translateX(-20px) scaleX(1); opacity: 0.32; }
+  50% { transform: translateX(20px) scaleX(1.08); opacity: 0.75; }
+}
+
+.sensor-node {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-water);
+  box-shadow: 0 0 18px var(--text-water);
+  animation: nodePulse 2s ease-in-out infinite;
+}
+
+.sensor-node::after {
+  content: attr(data-label);
+  position: absolute;
+  left: 20px;
+  top: -2px;
+  color: var(--text-main);
+  font-size: 10px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.node-a { left: 18%; top: 30%; }
+.node-b { left: 58%; top: 42%; animation-delay: 0.4s; }
+.node-c { left: 38%; top: 68%; animation-delay: 0.8s; }
+.node-d { left: 74%; top: 74%; animation-delay: 1.2s; }
+
+@keyframes nodePulse {
+  0%, 100% { transform: scale(0.8); opacity: 0.52; }
+  50% { transform: scale(1.25); opacity: 1; }
+}
+
+.speed-panel {
+  min-height: 324px;
+}
+
+.speed-meter-wrap {
+  min-height: 264px;
+}
+
+.speed-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: -8px;
+}
+
+.event-list {
+  display: grid;
+  gap: 10px;
+}
+
+.advanced-grid,
+.device-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.86fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.live-feed-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.feed-card {
+  min-height: 206px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-input);
+  padding: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.feed-card canvas,
+.history-box canvas {
+  width: 100%;
+  height: 142px;
+  display: block;
+}
+
+.feed-title,
+.field-label {
+  color: var(--text-label);
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.feed-value {
+  color: var(--text-logo);
+  font-size: 20px;
+  letter-spacing: 1px;
+  margin: 8px 0 10px;
+}
+
+.history-box {
+  border: 1px solid var(--border-soft);
+  background: var(--bg-input);
+  padding: 12px;
+}
+
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.heat-cell {
+  aspect-ratio: 1;
+  border: 1px solid rgba(49, 199, 232, 0.18);
+  background: rgba(49, 199, 232, var(--heat));
+  box-shadow: 0 0 10px rgba(49, 199, 232, calc(var(--heat) * 0.35));
+  transition: background 0.35s, box-shadow 0.35s, transform 0.35s;
+}
+
+.heat-cell.hot {
+  background: rgba(208, 108, 77, var(--heat));
+  border-color: rgba(208, 108, 77, 0.32);
+}
+
+.heat-cell:hover {
+  transform: scale(1.18);
+}
+
+.geo-map {
+  min-height: 322px;
+  border: 1px solid var(--border-soft);
+  background:
+    radial-gradient(circle at 20% 32%, rgba(49, 199, 232, 0.2), transparent 18%),
+    radial-gradient(circle at 70% 70%, rgba(122, 221, 160, 0.13), transparent 20%),
+    linear-gradient(135deg, transparent 0 47%, rgba(230, 168, 32, 0.12) 48% 49%, transparent 50%),
+    var(--bg-input);
+  position: relative;
+  overflow: hidden;
+}
+
+.geo-map::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px dashed rgba(49, 199, 232, 0.22);
+}
+
+.deploy-node {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  transform: translate(-50%, -50%);
+  min-width: 126px;
+  padding: 9px 10px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-panel);
+  color: var(--text-main);
+  font-size: 10px;
+  letter-spacing: 1px;
+  box-shadow: 0 0 18px rgba(49, 199, 232, 0.14);
+}
+
+.deploy-node::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: var(--text-good);
+  box-shadow: 0 0 12px var(--text-good);
+  animation: nodePulse 2s ease-in-out infinite;
+}
+
+.deploy-node.warn::before {
+  background: var(--text-warn);
+  box-shadow: 0 0 12px var(--text-warn);
+}
+
+.deploy-node.offline::before {
+  background: var(--text-bad);
+  box-shadow: 0 0 12px var(--text-bad);
+}
+
+.deploy-node strong,
+.device-card strong {
+  display: block;
+  color: var(--text-logo);
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+
+.deploy-node span,
+.device-card span {
+  display: block;
+  color: var(--text-sub);
+}
+
+.alert-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.control-field {
+  border: 1px solid var(--border-soft);
+  background: var(--bg-input);
+  padding: 10px;
+}
+
+.control-field input {
+  width: 100%;
+  min-height: 34px;
+  margin-top: 8px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-panel);
+  color: var(--text-main);
+  padding: 0 9px;
+  outline: none;
+}
+
+.channel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--text-main);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.channel-row input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--text-water);
+}
+
+.action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.alert-log {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.alert-log-item {
+  border: 1px solid var(--border-soft);
+  background: var(--bg-input);
+  padding: 9px 10px;
+  color: var(--text-main);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.alert-log-item.warn {
+  border-color: rgba(224, 162, 64, 0.55);
+}
+
+.alert-log-item.bad {
+  border-color: rgba(208, 108, 77, 0.58);
+}
+
+.device-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.device-form input {
+  min-height: 36px;
+  border: 1px solid var(--border-main);
+  background: var(--bg-input);
+  color: var(--text-main);
+  padding: 0 10px;
+  outline: none;
+}
+
+.device-list {
+  display: grid;
+  gap: 10px;
+}
+
+.device-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-input);
+  padding: 12px;
+}
+
+.device-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.mini-btn {
+  min-height: 30px;
+  border: 1px solid var(--border-main);
+  background: transparent;
+  color: var(--text-logo);
+  padding: 0 8px;
+  cursor: pointer;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: background 0.25s, border-color 0.25s, transform 0.25s;
+}
+
+.mini-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-water);
+  transform: translateY(-1px);
+}
+
+.toast-stack {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 240;
+  display: grid;
+  gap: 10px;
+  width: min(360px, calc(100vw - 36px));
+}
+
+.toast {
+  border: 1px solid var(--border-main);
+  background: var(--bg-panel-strong);
+  color: var(--text-main);
+  padding: 12px 14px;
+  box-shadow: 0 16px 34px var(--shadow);
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: 1px;
+  animation: toastIn 0.28s ease both;
+}
+
+.toast strong {
+  display: block;
+  color: var(--text-logo);
+  font-weight: 400;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.toast.warn {
+  border-color: rgba(224, 162, 64, 0.6);
+}
+
+.toast.bad {
+  border-color: rgba(208, 108, 77, 0.7);
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notice {
+  margin-top: 12px;
+  color: var(--text-sub);
+  font-size: 9px;
+  line-height: 1.6;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 1180px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    min-height: auto;
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(220px, 0.8fr) 1fr minmax(180px, 0.7fr);
+    gap: 18px;
+    align-items: start;
+    border-right: none;
+    border-bottom: 1px solid var(--border-main);
+  }
+
+  .brand,
+  .nav {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .nav {
+    padding: 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .system-card {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 980px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .layout-grid,
+  .weather-grid,
+  .bottom-grid,
+  .advanced-grid,
+  .device-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-right: 0;
+  }
+
+  .top-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  #themeToggle {
+    top: 12px;
+    right: 12px;
+    padding: 7px 10px;
+  }
+
+  .main {
+    padding: 18px 14px 28px;
+  }
+
+  .sidebar {
+    grid-template-columns: 1fr;
+    padding: 18px 14px;
+  }
+
+  .nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metric-grid,
+  .quality-grid,
+  .live-feed-grid,
+  .alert-grid,
+  .device-form {
+    grid-template-columns: 1fr;
+  }
+
+  .safe-meter-wrap {
+    min-height: 280px;
+  }
+
+  .thermometer-box {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .page-title {
+    padding-right: 92px;
+    font-size: 24px;
+  }
+}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+<div class="pulse-grid"></div>
+<div class="scanline"></div>
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<button id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+  <span class="t-icon" id="themeIcon">&#9789;</span>
+  <div class="t-track"><div class="t-thumb"></div></div>
+  <span class="t-label" id="themeLabel">Dark</span>
+</button>
+
+<div class="dashboard">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"></div>
+      <div>
+        <div class="brand-title">AQUA<span>TRACE</span></div>
+        <div class="brand-sub">IoT Microplastic Detector</div>
+      </div>
+    </div>
+
+    <nav class="nav" aria-label="Dashboard navigation">
+      <button class="active" type="button">Overview <span class="nav-code">01</span></button>
+      <button type="button">Water <span class="nav-code">02</span></button>
+      <button type="button">Weather <span class="nav-code">03</span></button>
+      <button type="button">Network <span class="nav-code">04</span></button>
+      <button type="button">Sensors <span class="nav-code">05</span></button>
+      <button type="button">Reports <span class="nav-code">06</span></button>
+    </nav>
+
+    <div class="system-card">
+      <h3>Device Link</h3>
+      <div class="signal" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="system-row"><span>Device</span><strong>AQT-MP-01</strong></div>
+      <div class="system-row"><span>Status</span><strong id="deviceMode">Sampling</strong></div>
+      <div class="system-row"><span>Ping</span><strong id="latencyValue">18ms</strong></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <div class="page-kicker">Water safety dashboard / live IoT telemetry</div>
+        <h1 class="page-title">Microplastic Detector Control</h1>
+      </div>
+      <div class="top-actions">
+        <div class="status-pill"><span class="dot" id="statusDot"></span><span id="systemStatus">Water currently safe</span></div>
+        <button class="action-btn" type="button" onclick="refreshDashboard()">Sync Device</button>
+        <button class="action-btn" type="button" id="exportCsvBtn" onclick="exportToCsv()">Export CSV</button>
+        <button class="action-btn" type="button" onclick="goHome()">Home</button>
+      </div>
+    </header>
+
+    <section class="metric-grid" aria-label="Live water metrics">
+      <article class="metric-card">
+        <div class="metric-label">Microplastics <span class="metric-icon">MP</span></div>
+        <div class="metric-value"><span id="microplasticValue" data-count="18">0</span></div>
+        <div class="metric-sub"><span>particles / liter</span><span class="spark"><span></span><span></span><span></span><span></span><span></span><span></span></span></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-label">Turbidity <span class="metric-icon">NT</span></div>
+        <div class="metric-value"><span id="turbidityValue" data-count="2">0</span></div>
+        <div class="metric-sub"><span>NTU water clarity</span><span class="spark"><span></span><span></span><span></span><span></span><span></span><span></span></span></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-label">Water Temp <span class="metric-icon">WT</span></div>
+        <div class="metric-value"><span id="waterTempValue" data-count="26">0</span>&deg;C</div>
+        <div class="metric-sub"><span>sensor chamber</span><span class="spark"><span></span><span></span><span></span><span></span><span></span><span></span></span></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-label">TDS <span class="metric-icon">TD</span></div>
+        <div class="metric-value"><span id="tdsValue" data-count="186">0</span></div>
+        <div class="metric-sub"><span>ppm dissolved solids</span><span class="spark"><span></span><span></span><span></span><span></span><span></span><span></span></span></div>
+      </article>
+    </section>
+
+    <section class="layout-grid">
+      <article class="panel safe-panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Drink Safety Meter</h2>
+            <p class="panel-sub">Live decision score from microplastic, turbidity, pH, TDS, and temperature sensors</p>
+          </div>
+          <div class="safe-badge" id="safeBadge">Safe</div>
+        </div>
+        <div class="safe-meter-wrap">
+          <canvas id="safeMeter"></canvas>
+          <div class="meter-center">
+            <div class="meter-value" id="safeScore">86</div>
+            <div class="meter-unit">water safety index</div>
+          </div>
+        </div>
+        <div class="quality-grid">
+          <div class="quality-row">
+            <div class="quality-top"><span>pH Balance</span><span id="phLabel">7.2</span></div>
+            <div class="quality-value">Neutral range</div>
+            <div class="mini-bar" style="--fill: 72%"><span id="phBar"></span></div>
+          </div>
+          <div class="quality-row">
+            <div class="quality-top"><span>Particle Risk</span><span id="riskLabel">Low</span></div>
+            <div class="quality-value" id="riskText">Drinkable signal</div>
+            <div class="mini-bar" style="--fill: 24%"><span id="riskBar"></span></div>
+          </div>
+        </div>
+        <p class="notice">This is a dashboard indicator. Final drinkability decisions must use calibrated hardware and verified safety limits.</p>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Microplastic Trend</h2>
+            <p class="panel-sub">Simulated live stream from the optical detection chamber</p>
+          </div>
+          <button class="action-btn" type="button" onclick="addSampleBurst()">Sample Burst</button>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="particleChart"></canvas>
+          <div class="chart-readout">
+            <div class="readout-item">COUNT <strong id="particleReadout">18 MP/L</strong></div>
+            <div class="readout-item">SIZE <strong id="sizeReadout">42 um</strong></div>
+            <div class="readout-item">FLOW <strong id="flowReadout">1.8 L/min</strong></div>
+          </div>
+        </div>
+        <div class="event-list" style="margin-top:12px;">
+          <div class="event-item">
+            <span class="dot"></span>
+            <div class="event-text"><strong>Optical scan complete</strong><span>405 nm pass, clean contrast</span></div>
+            <span class="tag">OK</span>
+          </div>
+          <div class="event-item">
+            <span class="dot warn"></span>
+            <div class="event-text"><strong>Filter load rising</strong><span>Replace membrane after 7 cycles</span></div>
+            <span class="tag warn">Watch</span>
+          </div>
+          <div class="event-item">
+            <span class="dot"></span>
+            <div class="event-text"><strong>Flow chamber stable</strong><span>No bubble interference detected</span></div>
+            <span class="tag">Clear</span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="weather-grid" style="margin-top:16px;">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Local Weather And Temperature</h2>
+            <p class="panel-sub">Use location permission to load current weather for the device locality</p>
+          </div>
+        </div>
+        <div class="thermometer-box" style="--temp-fill: 52%;">
+          <div class="thermometer" id="thermometer"></div>
+          <div>
+            <div class="temperature-value"><span id="weatherTemp">--</span>&deg;C</div>
+            <div class="temperature-meta">
+              <div>Locality: <span id="localityName">Manual / not locked</span></div>
+              <div>Condition: <span id="weatherCondition">Waiting for weather sync</span></div>
+              <div>Humidity: <span id="humidityValue">--%</span></div>
+              <div>Wind: <span id="windValue">-- km/h</span></div>
+            </div>
+            <div class="weather-actions">
+              <input class="locality-input" id="localityInput" type="text" placeholder="Type locality label">
+              <button class="action-btn" type="button" onclick="setManualLocality()">Set Label</button>
+              <button class="action-btn" type="button" onclick="requestWeather()">Use Local Weather</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Weather Impact On Sample</h2>
+            <p class="panel-sub">Outdoor conditions that can influence collection and transport</p>
+          </div>
+        </div>
+        <div class="weather-list">
+          <div class="weather-item">
+            <span class="weather-code">TMP</span>
+            <div class="weather-text"><strong id="weatherAdvice">Temperature waiting</strong><span>Sync weather to calculate thermal effect</span></div>
+            <span class="tag" id="weatherTag">Idle</span>
+          </div>
+          <div class="weather-item">
+            <span class="weather-code">RAIN</span>
+            <div class="weather-text"><strong id="rainAdvice">Rainfall not loaded</strong><span>Rain may increase runoff particles</span></div>
+            <span class="tag warn" id="rainTag">Check</span>
+          </div>
+          <div class="weather-item">
+            <span class="weather-code">LOC</span>
+            <div class="weather-text"><strong id="locationAdvice">Location optional</strong><span>Weather uses coordinates only after user action</span></div>
+            <span class="tag">Manual</span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="bottom-grid">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Sampling Zone Map</h2>
+            <p class="panel-sub">Animated water route and sensor checkpoints for the detector rig</p>
+          </div>
+        </div>
+        <div class="sample-map">
+          <div class="water-wave"></div>
+          <div class="water-wave"></div>
+          <div class="water-wave"></div>
+          <div class="sensor-node node-a" data-label="Intake"></div>
+          <div class="sensor-node node-b" data-label="Optical chamber"></div>
+          <div class="sensor-node node-c" data-label="Filter membrane"></div>
+          <div class="sensor-node node-d" data-label="Output valve"></div>
+        </div>
+      </article>
+
+      <article class="panel speed-panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">User Internet Speed</h2>
+            <p class="panel-sub">Browser connection estimate with animated speedometer</p>
+          </div>
+        </div>
+        <div class="speed-meter-wrap">
+          <canvas id="speedMeter"></canvas>
+          <div class="meter-center">
+            <div class="meter-value" id="speedValue">--</div>
+            <div class="meter-unit">Mbps</div>
+          </div>
+        </div>
+        <div class="speed-actions">
+          <button class="action-btn" type="button" onclick="runSpeedEstimate()">Run Speed Check</button>
+        </div>
+        <p class="notice" id="speedNote">Uses the browser network estimate when available. Hosted pages can also estimate by timing this dashboard download.</p>
+      </article>
+    </section>
+
+    <section class="advanced-grid">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Live Sensor Feed</h2>
+            <p class="panel-sub">Separate telemetry streams for concentration, particle size, and detection frequency</p>
+          </div>
+        </div>
+        <div class="live-feed-grid">
+          <div class="feed-card">
+            <div class="feed-title">Concentration</div>
+            <div class="feed-value"><span id="liveConcentration">18</span> MP/L</div>
+            <canvas id="concentrationChart"></canvas>
+          </div>
+          <div class="feed-card">
+            <div class="feed-title">Particle Size</div>
+            <div class="feed-value"><span id="liveParticleSize">42</span> um</div>
+            <canvas id="sizeChart"></canvas>
+          </div>
+          <div class="feed-card">
+            <div class="feed-title">Detection Frequency</div>
+            <div class="feed-value"><span id="liveFrequency">21</span> /min</div>
+            <canvas id="frequencyChart"></canvas>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Historical Trends</h2>
+            <p class="panel-sub">Past readings as a line chart and hourly heatmap</p>
+          </div>
+        </div>
+        <div class="history-box">
+          <canvas id="historyChart"></canvas>
+          <div class="heatmap" id="heatmapGrid" aria-label="Historical microplastic heatmap"></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="advanced-grid">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Detector Deployment Map</h2>
+            <p class="panel-sub">Multiple detector locations with health and threshold status</p>
+          </div>
+        </div>
+        <div class="geo-map" id="detectorMap"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Threshold Alerts And Notifications</h2>
+            <p class="panel-sub">Configure local alert rules for email, SMS, and Telegram notification channels</p>
+          </div>
+        </div>
+        <div class="alert-grid">
+          <div class="control-field">
+            <div class="field-label">Limit MP/L</div>
+            <input id="thresholdInput" type="number" min="1" max="500" value="35">
+          </div>
+          <div class="control-field">
+            <div class="field-label">Notification Channels</div>
+            <label class="channel-row"><input id="emailChannel" type="checkbox" checked> Email</label>
+            <label class="channel-row"><input id="smsChannel" type="checkbox"> SMS</label>
+            <label class="channel-row"><input id="telegramChannel" type="checkbox" checked> Telegram</label>
+          </div>
+          <div class="control-field">
+            <div class="field-label">Recipients</div>
+            <input id="emailTarget" type="email" placeholder="operator@example.com">
+            <input id="smsTarget" type="tel" placeholder="+91 phone" style="margin-top:8px;">
+            <input id="telegramTarget" type="text" placeholder="@telegram_channel" style="margin-top:8px;">
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="action-btn" type="button" onclick="saveAlertRules()">Save Alert Rules</button>
+          <button class="action-btn" type="button" onclick="simulateUnsafeAlert()">Simulate Unsafe Alert</button>
+        </div>
+        <div class="alert-log" id="alertLog">
+          <div class="alert-log-item">Alert engine ready. No threshold breach recorded.</div>
+        </div>
+        <p class="notice">Notification delivery is prepared as UI logic only. Real email, SMS, or Telegram sending needs a backend endpoint and explicit send confirmation.</p>
+      </article>
+    </section>
+
+    <section class="device-grid">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Device Management</h2>
+            <p class="panel-sub">Add or remove deployed IoT detectors and monitor online/offline health</p>
+          </div>
+        </div>
+        <div class="device-form">
+          <input id="deviceNameInput" type="text" placeholder="Device name e.g. AQT-MP-04">
+          <input id="deviceLocationInput" type="text" placeholder="Location e.g. Campus Tank">
+          <button class="action-btn" type="button" onclick="addDevice()">Add Device</button>
+        </div>
+        <div class="device-list" id="deviceList"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Firmware Control</h2>
+            <p class="panel-sub">Trigger simulated firmware update jobs and track rollout state</p>
+          </div>
+        </div>
+        <div class="event-list" id="firmwareLog">
+          <div class="event-item">
+            <span class="dot"></span>
+            <div class="event-text"><strong>Firmware channel stable</strong><span>Latest build v1.2.4 available</span></div>
+            <span class="tag">Ready</span>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+function goHome() {
+  window.location.href = 'index.html';
+}
+
+var isDark = true;
+var gearColor = "#c8901a";
+var screwColor = "#8a7a5a";
+var gearAlpha = 0.14;
+var screwAlpha = 0.22;
+
+var telemetry = {
+  microplastics: 18,
+  turbidity: 2.3,
+  waterTemp: 26,
+  tds: 186,
+  ph: 7.2,
+  size: 42,
+  flow: 1.8,
+  safeScore: 86
+};
+
+var alertRules = {
+  threshold: 35,
+  email: true,
+  sms: false,
+  telegram: true,
+  emailTarget: "",
+  smsTarget: "",
+  telegramTarget: ""
+};
+
+var lastThresholdAlertAt = 0;
+var detectionFrequency = 21;
+var sizeHistory = [];
+var frequencyHistory = [];
+var historicalTrend = [];
+var heatmapValues = [];
+var deployedDevices = [
+  { id: "AQT-MP-01", name: "AQT-MP-01", location: "Main Water Tank", status: "online", firmware: "v1.2.3", risk: "safe", x: 20, y: 30 },
+  { id: "AQT-MP-02", name: "AQT-MP-02", location: "River Intake", status: "online", firmware: "v1.2.2", risk: "warn", x: 64, y: 42 },
+  { id: "AQT-MP-03", name: "AQT-MP-03", location: "Lab Outlet", status: "offline", firmware: "v1.1.9", risk: "offline", x: 43, y: 72 }
+];
+
+function applyTheme(mode) {
+  isDark = mode !== "light";
+  document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+  document.getElementById("themeIcon").textContent = isDark ? "\u263D" : "\u2600";
+  document.getElementById("themeLabel").textContent = isDark ? "Dark" : "Light";
+  gearColor = isDark ? "#c8901a" : "#7a5008";
+  screwColor = isDark ? "#8a7a5a" : "#9a7830";
+  gearAlpha = isDark ? 0.14 : 0.18;
+  screwAlpha = isDark ? 0.22 : 0.26;
+  if (typeof safeCanvas !== "undefined" && safeCanvas) drawSafeMeter();
+  if (typeof speedCanvas !== "undefined" && speedCanvas) drawSpeedMeter(currentSpeed);
+}
+
+function toggleTheme() {
+  var nextTheme = isDark ? "light" : "dark";
+  localStorage.setItem("theme", nextTheme);
+  applyTheme(nextTheme);
+}
+
+applyTheme(localStorage.getItem("theme") || "dark");
+
+document.querySelectorAll(".nav button").forEach(function(button) {
+  button.addEventListener("click", function() {
+    document.querySelectorAll(".nav button").forEach(function(item) {
+      item.classList.remove("active");
+    });
+    button.classList.add("active");
+  });
+});
+
+var bgCanvas = document.getElementById("bgCanvas");
+var bgCtx = bgCanvas.getContext("2d");
+var elements = [];
+
+function resizeBackground() {
+  bgCanvas.width = window.innerWidth;
+  bgCanvas.height = window.innerHeight;
+  initBackground();
+}
+
+function drawGear(x, y, outerRadius, innerRadius, teeth, angle) {
+  bgCtx.save();
+  bgCtx.globalAlpha = gearAlpha;
+  bgCtx.translate(x, y);
+  bgCtx.rotate(angle);
+  var toothWidth = (2 * Math.PI / teeth) * 0.32;
+  bgCtx.beginPath();
+  for (var i = 0; i < teeth; i++) {
+    var a = (i / teeth) * Math.PI * 2;
+    bgCtx.lineTo(Math.cos(a - toothWidth) * innerRadius, Math.sin(a - toothWidth) * innerRadius);
+    bgCtx.lineTo(Math.cos(a - toothWidth) * outerRadius, Math.sin(a - toothWidth) * outerRadius);
+    bgCtx.lineTo(Math.cos(a + toothWidth) * outerRadius, Math.sin(a + toothWidth) * outerRadius);
+    bgCtx.lineTo(Math.cos(a + toothWidth) * innerRadius, Math.sin(a + toothWidth) * innerRadius);
+  }
+  bgCtx.closePath();
+  bgCtx.strokeStyle = gearColor;
+  bgCtx.lineWidth = 1.4;
+  bgCtx.stroke();
+  bgCtx.beginPath();
+  bgCtx.arc(0, 0, innerRadius * 0.54, 0, Math.PI * 2);
+  bgCtx.stroke();
+  bgCtx.beginPath();
+  bgCtx.arc(0, 0, innerRadius * 0.17, 0, Math.PI * 2);
+  bgCtx.fillStyle = gearColor;
+  bgCtx.fill();
+  bgCtx.restore();
+}
+
+function drawScrew(x, y, radius, angle) {
+  bgCtx.save();
+  bgCtx.globalAlpha = screwAlpha;
+  bgCtx.translate(x, y);
+  bgCtx.rotate(angle);
+  bgCtx.beginPath();
+  bgCtx.arc(0, 0, radius, 0, Math.PI * 2);
+  bgCtx.strokeStyle = screwColor;
+  bgCtx.lineWidth = 1.15;
+  bgCtx.stroke();
+  bgCtx.beginPath();
+  bgCtx.moveTo(-radius * 0.65, 0);
+  bgCtx.lineTo(radius * 0.65, 0);
+  bgCtx.stroke();
+  bgCtx.beginPath();
+  bgCtx.moveTo(0, -radius * 0.65);
+  bgCtx.lineTo(0, radius * 0.65);
+  bgCtx.stroke();
+  bgCtx.restore();
+}
+
+function initBackground() {
+  var width = bgCanvas.width;
+  var height = bgCanvas.height;
+  elements = [];
+  var gears = [
+    [0.03, 0.08, 78, 58, 12, 0.0025, 1],
+    [0.20, 0.28, 46, 34, 8, 0.0042, -1],
+    [0.88, 0.12, 84, 62, 14, 0.002, 1],
+    [0.74, 0.31, 52, 38, 10, 0.0035, -1],
+    [0.95, 0.69, 66, 50, 12, 0.003, 1],
+    [0.08, 0.78, 60, 44, 10, 0.0038, -1],
+    [0.50, 0.95, 48, 35, 9, 0.0045, -1],
+    [0.58, 0.58, 38, 27, 8, 0.005, 1]
+  ];
+  gears.forEach(function(gear) {
+    elements.push({
+      type: "gear",
+      x: gear[0] * width,
+      y: gear[1] * height,
+      outerRadius: gear[2],
+      innerRadius: gear[3],
+      teeth: gear[4],
+      speed: gear[5] * gear[6],
+      angle: Math.random() * Math.PI * 2
+    });
+  });
+  var screws = [
+    [0.30, 0.10], [0.62, 0.14], [0.40, 0.92], [0.70, 0.86],
+    [0.96, 0.35], [0.02, 0.45], [0.13, 0.56], [0.86, 0.77],
+    [0.48, 0.22], [0.57, 0.40], [0.24, 0.64], [0.78, 0.52]
+  ];
+  screws.forEach(function(screw) {
+    elements.push({
+      type: "screw",
+      x: screw[0] * width,
+      baseY: screw[1] * height,
+      radius: 8 + Math.random() * 9,
+      angle: Math.random() * Math.PI * 2,
+      speed: (Math.random() - 0.5) * 0.022,
+      drift: Math.random() * Math.PI * 2,
+      driftSpeed: 0.004 + Math.random() * 0.01
+    });
+  });
+}
+
+function loopBackground() {
+  bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+  elements.forEach(function(item) {
+    if (item.type === "gear") {
+      item.angle += item.speed;
+      drawGear(item.x, item.y, item.outerRadius, item.innerRadius, item.teeth, item.angle);
+    } else {
+      item.angle += item.speed;
+      item.drift += item.driftSpeed;
+      drawScrew(item.x, item.baseY + Math.sin(item.drift) * 8, item.radius, item.angle);
+    }
+  });
+  requestAnimationFrame(loopBackground);
+}
+
+resizeBackground();
+window.addEventListener("resize", resizeBackground);
+loopBackground();
+
+var safeCanvas = document.getElementById("safeMeter");
+var safeCtx = safeCanvas.getContext("2d");
+var speedCanvas = document.getElementById("speedMeter");
+var speedCtx = speedCanvas.getContext("2d");
+var currentSpeed = 0;
+
+function sizeMeterCanvas(canvas) {
+  var rect = canvas.getBoundingClientRect();
+  var ratio = window.devicePixelRatio || 1;
+  canvas.width = Math.max(320, Math.floor(rect.width * ratio));
+  canvas.height = Math.max(220, Math.floor(rect.height * ratio));
+  var ctx = canvas.getContext("2d");
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+}
+
+function drawGauge(ctx, canvas, value, maxValue, labels, accentColor, dangerColor) {
+  var width = canvas.getBoundingClientRect().width;
+  var height = canvas.getBoundingClientRect().height;
+  ctx.clearRect(0, 0, width, height);
+  var cx = width / 2;
+  var cy = height * 0.73;
+  var radius = Math.min(width * 0.42, height * 0.62);
+  var start = Math.PI * 0.78;
+  var end = Math.PI * 2.22;
+  var span = end - start;
+  var normalized = Math.max(0, Math.min(1, value / maxValue));
+
+  ctx.lineCap = "butt";
+  ctx.lineWidth = Math.max(22, radius * 0.15);
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, start, end);
+  ctx.strokeStyle = "rgba(100, 117, 166, 0.28)";
+  ctx.stroke();
+
+  var grad = ctx.createLinearGradient(cx - radius, cy - radius, cx + radius, cy);
+  grad.addColorStop(0, "#23bdf0");
+  grad.addColorStop(0.55, accentColor);
+  grad.addColorStop(1, dangerColor);
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, start, start + span * normalized);
+  ctx.strokeStyle = grad;
+  ctx.stroke();
+
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  for (var i = 0; i <= 10; i++) {
+    var a = start + (span * i / 10);
+    var inner = radius - 16;
+    var outer = radius + 8;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+    ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = isDark ? "#f4efe6" : "#2a2016";
+  ctx.font = "700 14px Courier New";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  labels.forEach(function(item) {
+    var a = start + span * item.position;
+    ctx.globalAlpha = item.primary ? 1 : 0.58;
+    ctx.fillText(item.text, cx + Math.cos(a) * (radius - 44), cy + Math.sin(a) * (radius - 44));
+  });
+  ctx.globalAlpha = 1;
+
+  var needleAngle = start + span * normalized;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(needleAngle);
+  var needleGrad = ctx.createLinearGradient(0, 0, radius - 35, 0);
+  needleGrad.addColorStop(0, "rgba(255,255,255,0.05)");
+  needleGrad.addColorStop(1, "rgba(255,255,255,0.95)");
+  ctx.beginPath();
+  ctx.moveTo(0, -7);
+  ctx.lineTo(radius - 38, 0);
+  ctx.lineTo(0, 7);
+  ctx.closePath();
+  ctx.fillStyle = needleGrad;
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSafeMeter() {
+  sizeMeterCanvas(safeCanvas);
+  drawGauge(safeCtx, safeCanvas, telemetry.safeScore, 100, [
+    { text: "0", position: 0, primary: true },
+    { text: "25", position: 0.25, primary: false },
+    { text: "50", position: 0.5, primary: true },
+    { text: "75", position: 0.75, primary: false },
+    { text: "100", position: 1, primary: true }
+  ], "#7adda0", "#d06c4d");
+}
+
+function drawSpeedMeter(speed) {
+  sizeMeterCanvas(speedCanvas);
+  drawGauge(speedCtx, speedCanvas, speed, 1000, [
+    { text: "0", position: 0, primary: true },
+    { text: "5", position: 0.11, primary: false },
+    { text: "10", position: 0.2, primary: true },
+    { text: "50", position: 0.36, primary: true },
+    { text: "100", position: 0.52, primary: true },
+    { text: "250", position: 0.66, primary: false },
+    { text: "500", position: 0.8, primary: false },
+    { text: "1000", position: 1, primary: false }
+  ], "#66f0c9", "#26365d");
+}
+
+window.addEventListener("resize", function() {
+  drawSafeMeter();
+  drawSpeedMeter(currentSpeed);
+  resizeParticleChart();
+  resizeMonitoringCharts();
+});
+
+var particleCanvas = document.getElementById("particleChart");
+var particleCtx = particleCanvas.getContext("2d");
+var chartPhase = 0;
+var particleHistory = [];
+var concentrationCanvas = document.getElementById("concentrationChart");
+var concentrationCtx = concentrationCanvas.getContext("2d");
+var sizeCanvas = document.getElementById("sizeChart");
+var sizeCtx = sizeCanvas.getContext("2d");
+var frequencyCanvas = document.getElementById("frequencyChart");
+var frequencyCtx = frequencyCanvas.getContext("2d");
+var historyCanvas = document.getElementById("historyChart");
+var historyCtx = historyCanvas.getContext("2d");
+
+function resizeParticleChart() {
+  var rect = particleCanvas.parentNode.getBoundingClientRect();
+  var ratio = window.devicePixelRatio || 1;
+  particleCanvas.width = Math.max(320, Math.floor(rect.width * ratio));
+  particleCanvas.height = Math.max(220, Math.floor(rect.height * ratio));
+  particleCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+}
+
+function seedParticleHistory() {
+  particleHistory = [];
+  sizeHistory = [];
+  frequencyHistory = [];
+  historicalTrend = [];
+  heatmapValues = [];
+  for (var i = 0; i < 80; i++) {
+    var particleValue = 14 + Math.sin(i * 0.25) * 5 + Math.random() * 5;
+    particleHistory.push(particleValue);
+    sizeHistory.push(34 + Math.sin(i * 0.18) * 16 + Math.random() * 18);
+    frequencyHistory.push(14 + Math.sin(i * 0.31) * 7 + Math.random() * 10);
+    historicalTrend.push(12 + Math.sin(i * 0.13) * 9 + Math.random() * 10);
+  }
+  for (var h = 0; h < 72; h++) {
+    heatmapValues.push(Math.max(0.08, Math.min(0.95, 0.18 + Math.random() * 0.45 + (h % 12 > 7 ? 0.18 : 0))));
+  }
+}
+
+function sizeCanvasToBox(canvas, ctx, minHeight) {
+  var rect = canvas.parentNode.getBoundingClientRect();
+  var ratio = window.devicePixelRatio || 1;
+  canvas.width = Math.max(260, Math.floor(rect.width * ratio));
+  canvas.height = Math.max(minHeight || 140, Math.floor(canvas.getBoundingClientRect().height * ratio));
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+}
+
+function resizeMonitoringCharts() {
+  sizeCanvasToBox(concentrationCanvas, concentrationCtx, 140);
+  sizeCanvasToBox(sizeCanvas, sizeCtx, 140);
+  sizeCanvasToBox(frequencyCanvas, frequencyCtx, 140);
+  sizeCanvasToBox(historyCanvas, historyCtx, 140);
+}
+
+function drawMiniLine(ctx, canvas, data, color, maxValue) {
+  var width = canvas.getBoundingClientRect().width;
+  var height = canvas.getBoundingClientRect().height;
+  ctx.clearRect(0, 0, width, height);
+  ctx.strokeStyle = "rgba(122, 104, 64, 0.18)";
+  ctx.lineWidth = 1;
+  for (var g = 1; g < 4; g++) {
+    ctx.beginPath();
+    ctx.moveTo(0, height * g / 4);
+    ctx.lineTo(width, height * g / 4);
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  data.forEach(function(value, index) {
+    var x = (index / (data.length - 1)) * width;
+    var y = height - Math.min(1, value / maxValue) * (height - 14) - 7;
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 10;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function drawMiniBars(ctx, canvas, data, color, maxValue) {
+  var width = canvas.getBoundingClientRect().width;
+  var height = canvas.getBoundingClientRect().height;
+  ctx.clearRect(0, 0, width, height);
+  var bars = 18;
+  var barWidth = width / bars - 4;
+  for (var i = 0; i < bars; i++) {
+    var value = data[data.length - bars + i] || 0;
+    var barHeight = Math.min(1, value / maxValue) * (height - 12);
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.42 + i / bars * 0.5;
+    ctx.fillRect(i * (barWidth + 4), height - barHeight, barWidth, barHeight);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawMonitoringCharts() {
+  drawMiniLine(concentrationCtx, concentrationCanvas, particleHistory, "#31c7e8", 72);
+  drawMiniBars(sizeCtx, sizeCanvas, sizeHistory, "#7adda0", 190);
+  drawMiniBars(frequencyCtx, frequencyCanvas, frequencyHistory, "#e6a820", 56);
+  drawMiniLine(historyCtx, historyCanvas, historicalTrend, "#7adda0", 75);
+  requestAnimationFrame(drawMonitoringCharts);
+}
+
+function renderHeatmap() {
+  var heatmap = document.getElementById("heatmapGrid");
+  heatmap.innerHTML = "";
+  heatmapValues.forEach(function(value, index) {
+    var cell = document.createElement("div");
+    cell.className = "heat-cell" + (value > 0.62 ? " hot" : "");
+    cell.style.setProperty("--heat", value.toFixed(2));
+    cell.title = "Hour " + (index + 1) + ": " + Math.round(value * 70) + " MP/L";
+    heatmap.appendChild(cell);
+  });
+}
+
+function drawParticleChart() {
+  var width = particleCanvas.getBoundingClientRect().width;
+  var height = particleCanvas.getBoundingClientRect().height;
+  particleCtx.clearRect(0, 0, width, height);
+  particleCtx.lineWidth = 2;
+  particleCtx.beginPath();
+  particleHistory.forEach(function(value, index) {
+    var x = (index / (particleHistory.length - 1)) * width;
+    var y = height - (value / 60) * height + Math.sin(index * 0.35 + chartPhase) * 4;
+    if (index === 0) particleCtx.moveTo(x, y);
+    else particleCtx.lineTo(x, y);
+  });
+  particleCtx.strokeStyle = "#31c7e8";
+  particleCtx.shadowColor = "#31c7e8";
+  particleCtx.shadowBlur = 14;
+  particleCtx.stroke();
+  particleCtx.shadowBlur = 0;
+
+  particleCtx.beginPath();
+  particleHistory.forEach(function(value, index) {
+    var x = (index / (particleHistory.length - 1)) * width;
+    var y = height - ((value + 11) / 80) * height + Math.sin(index * 0.25 + chartPhase * 1.4) * 5;
+    if (index === 0) particleCtx.moveTo(x, y);
+    else particleCtx.lineTo(x, y);
+  });
+  particleCtx.strokeStyle = "#7adda0";
+  particleCtx.shadowColor = "#7adda0";
+  particleCtx.shadowBlur = 10;
+  particleCtx.stroke();
+  particleCtx.shadowBlur = 0;
+
+  chartPhase += 0.025;
+  if (Math.random() > 0.92) {
+    particleHistory.push(Math.max(5, Math.min(58, telemetry.microplastics + (Math.random() - 0.4) * 10)));
+    particleHistory.shift();
+  }
+  requestAnimationFrame(drawParticleChart);
+}
+
+function calculateSafetyScore() {
+  var microPenalty = telemetry.microplastics * 1.25;
+  var turbidityPenalty = telemetry.turbidity * 4.2;
+  var tdsPenalty = Math.max(0, telemetry.tds - 250) * 0.05;
+  var phPenalty = Math.abs(7.2 - telemetry.ph) * 12;
+  var tempPenalty = Math.max(0, telemetry.waterTemp - 30) * 2;
+  telemetry.safeScore = Math.max(0, Math.min(100, Math.round(100 - microPenalty - turbidityPenalty - tdsPenalty - phPenalty - tempPenalty)));
+}
+
+function setSafetyState() {
+  var badge = document.getElementById("safeBadge");
+  var dot = document.getElementById("statusDot");
+  var status = document.getElementById("systemStatus");
+  var riskLabel = document.getElementById("riskLabel");
+  var riskText = document.getElementById("riskText");
+  badge.className = "safe-badge";
+  dot.className = "dot";
+  if (telemetry.safeScore >= 75) {
+    badge.textContent = "Safe";
+    status.textContent = "Water currently safe";
+    riskLabel.textContent = "Low";
+    riskText.textContent = "Drinkable signal";
+  } else if (telemetry.safeScore >= 50) {
+    badge.className = "safe-badge warn";
+    dot.className = "dot warn";
+    badge.textContent = "Caution";
+    status.textContent = "Water needs review";
+    riskLabel.textContent = "Medium";
+    riskText.textContent = "Filter recommended";
+  } else {
+    badge.className = "safe-badge bad";
+    dot.className = "dot bad";
+    badge.textContent = "Unsafe";
+    status.textContent = "Do not drink";
+    riskLabel.textContent = "High";
+    riskText.textContent = "Unsafe signal";
+  }
+}
+
+function updateTelemetryUI() {
+  calculateSafetyScore();
+  setSafetyState();
+  document.getElementById("microplasticValue").textContent = telemetry.microplastics;
+  document.getElementById("turbidityValue").textContent = telemetry.turbidity.toFixed(1);
+  document.getElementById("waterTempValue").textContent = telemetry.waterTemp.toFixed(0);
+  document.getElementById("tdsValue").textContent = telemetry.tds;
+  document.getElementById("safeScore").textContent = telemetry.safeScore;
+  document.getElementById("phLabel").textContent = telemetry.ph.toFixed(1);
+  document.getElementById("particleReadout").textContent = telemetry.microplastics + " MP/L";
+  document.getElementById("sizeReadout").textContent = telemetry.size + " um";
+  document.getElementById("flowReadout").textContent = telemetry.flow.toFixed(1) + " L/min";
+  document.getElementById("liveConcentration").textContent = telemetry.microplastics;
+  document.getElementById("liveParticleSize").textContent = telemetry.size;
+  document.getElementById("liveFrequency").textContent = detectionFrequency;
+  document.getElementById("riskBar").parentNode.style.setProperty("--fill", Math.min(100, telemetry.microplastics * 3) + "%");
+  drawSafeMeter();
+  evaluateThresholdAlerts(false);
+}
+
+function showToast(title, message, type) {
+  var stack = document.getElementById("toastStack");
+  var toast = document.createElement("div");
+  toast.className = "toast" + (type ? " " + type : "");
+  toast.innerHTML = "<strong>" + escapeHtml(title) + "</strong>" + escapeHtml(message);
+  stack.appendChild(toast);
+  setTimeout(function() {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(10px)";
+    setTimeout(function() { toast.remove(); }, 280);
+  }, 4200);
+}
+
+function addAlertLog(message, type) {
+  var log = document.getElementById("alertLog");
+  var item = document.createElement("div");
+  item.className = "alert-log-item" + (type ? " " + type : "");
+  item.textContent = new Date().toLocaleTimeString() + " / " + message;
+  log.insertBefore(item, log.firstChild);
+  while (log.children.length > 5) log.removeChild(log.lastChild);
+}
+
+function selectedChannelsText() {
+  var channels = [];
+  if (alertRules.email) channels.push("Email");
+  if (alertRules.sms) channels.push("SMS");
+  if (alertRules.telegram) channels.push("Telegram");
+  return channels.length ? channels.join(", ") : "On-screen only";
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function saveAlertRules() {
+  alertRules.threshold = Math.max(1, Number(document.getElementById("thresholdInput").value) || 35);
+  alertRules.email = document.getElementById("emailChannel").checked;
+  alertRules.sms = document.getElementById("smsChannel").checked;
+  alertRules.telegram = document.getElementById("telegramChannel").checked;
+  alertRules.emailTarget = document.getElementById("emailTarget").value.trim();
+  alertRules.smsTarget = document.getElementById("smsTarget").value.trim();
+  alertRules.telegramTarget = document.getElementById("telegramTarget").value.trim();
+  addAlertLog("Rules saved. Limit " + alertRules.threshold + " MP/L. Channels: " + selectedChannelsText() + ".", "warn");
+  showToast("Alert Rules Saved", "Threshold is now " + alertRules.threshold + " MP/L. Delivery channels are simulated until backend wiring is added.", "warn");
+  evaluateThresholdAlerts(true);
+}
+
+function evaluateThresholdAlerts(force) {
+  var now = Date.now();
+  if (telemetry.microplastics <= alertRules.threshold && !force) return;
+  if (!force && now - lastThresholdAlertAt < 13000) return;
+  lastThresholdAlertAt = now;
+  if (telemetry.microplastics > alertRules.threshold) {
+    var message = "Microplastic concentration is " + telemetry.microplastics + " MP/L, above " + alertRules.threshold + " MP/L. Channels: " + selectedChannelsText() + ".";
+    addAlertLog(message, telemetry.microplastics > alertRules.threshold * 1.4 ? "bad" : "warn");
+    showToast("Threshold Breach", message, telemetry.microplastics > alertRules.threshold * 1.4 ? "bad" : "warn");
+  }
+}
+
+function simulateUnsafeAlert() {
+  telemetry.microplastics = Math.max(telemetry.microplastics, alertRules.threshold + 12);
+  lastThresholdAlertAt = Date.now();
+  updateTelemetryUI();
+  evaluateThresholdAlerts(true);
+}
+
+function renderDetectorMap() {
+  var map = document.getElementById("detectorMap");
+  map.innerHTML = "";
+  deployedDevices.forEach(function(device) {
+    var node = document.createElement("div");
+    node.className = "deploy-node" + (device.risk === "warn" ? " warn" : "") + (device.status === "offline" ? " offline" : "");
+    node.style.setProperty("--x", device.x + "%");
+    node.style.setProperty("--y", device.y + "%");
+    node.innerHTML = "<strong>" + escapeHtml(device.name) + "</strong><span>" + escapeHtml(device.location) + " / " + escapeHtml(device.status) + "</span>";
+    map.appendChild(node);
+  });
+}
+
+function renderDeviceList() {
+  var list = document.getElementById("deviceList");
+  list.innerHTML = "";
+  deployedDevices.forEach(function(device) {
+    var card = document.createElement("div");
+    var tagClass = device.status === "offline" ? "tag bad" : device.risk === "warn" ? "tag warn" : "tag";
+    card.className = "device-card";
+    card.innerHTML =
+      "<div><strong>" + escapeHtml(device.name) + "</strong><span>" + escapeHtml(device.location) + " / firmware " + escapeHtml(device.firmware) + "</span></div>" +
+      "<div class=\"device-actions\">" +
+      "<span class=\"" + tagClass + "\">" + escapeHtml(device.status) + "</span>" +
+      "<button class=\"mini-btn\" type=\"button\" onclick=\"toggleDeviceStatus('" + device.id + "')\">Toggle</button>" +
+      "<button class=\"mini-btn\" type=\"button\" onclick=\"triggerFirmware('" + device.id + "')\">Firmware</button>" +
+      "<button class=\"mini-btn\" type=\"button\" onclick=\"removeDevice('" + device.id + "')\">Remove</button>" +
+      "</div>";
+    list.appendChild(card);
+  });
+}
+
+function addDevice() {
+  var nameInput = document.getElementById("deviceNameInput");
+  var locationInput = document.getElementById("deviceLocationInput");
+  var name = nameInput.value.trim() || "AQT-MP-" + String(deployedDevices.length + 1).padStart(2, "0");
+  var location = locationInput.value.trim() || "Unassigned Site";
+  var id = "dev-" + Date.now();
+  deployedDevices.push({
+    id: id,
+    name: name,
+    location: location,
+    status: "online",
+    firmware: "v1.2.3",
+    risk: "safe",
+    x: 16 + Math.random() * 68,
+    y: 18 + Math.random() * 64
+  });
+  nameInput.value = "";
+  locationInput.value = "";
+  renderDeviceList();
+  renderDetectorMap();
+  showToast("Device Added", name + " is now visible in the deployment map.", "");
+}
+
+function removeDevice(id) {
+  deployedDevices = deployedDevices.filter(function(device) { return device.id !== id; });
+  renderDeviceList();
+  renderDetectorMap();
+  showToast("Device Removed", "Detector removed from the local dashboard view.", "warn");
+}
+
+function toggleDeviceStatus(id) {
+  deployedDevices.forEach(function(device) {
+    if (device.id === id) {
+      device.status = device.status === "online" ? "offline" : "online";
+      device.risk = device.status === "offline" ? "offline" : "safe";
+      showToast("Device Status", device.name + " changed to " + device.status + ".", device.status === "offline" ? "bad" : "");
+    }
+  });
+  renderDeviceList();
+  renderDetectorMap();
+}
+
+function triggerFirmware(id) {
+  var device = deployedDevices.find(function(item) { return item.id === id; });
+  if (!device) return;
+  var log = document.getElementById("firmwareLog");
+  var item = document.createElement("div");
+  item.className = "event-item";
+  item.innerHTML = "<span class=\"dot warn\"></span><div class=\"event-text\"><strong>" + escapeHtml(device.name) + " update queued</strong><span>Firmware package is being staged</span></div><span class=\"tag warn\">Updating</span>";
+  log.insertBefore(item, log.firstChild);
+  showToast("Firmware Update", device.name + " update trigger queued locally.", "warn");
+  setTimeout(function() {
+    device.firmware = "v1.2." + (4 + Math.floor(Math.random() * 4));
+    item.innerHTML = "<span class=\"dot\"></span><div class=\"event-text\"><strong>" + escapeHtml(device.name) + " update complete</strong><span>Now running firmware " + escapeHtml(device.firmware) + "</span></div><span class=\"tag\">Done</span>";
+    renderDeviceList();
+    showToast("Firmware Complete", device.name + " is now running " + device.firmware + ".", "");
+  }, 2200);
+}
+
+function animateCounters() {
+  document.querySelectorAll("[data-count]").forEach(function(counter) {
+    var target = Number(counter.getAttribute("data-count"));
+    var current = 0;
+    var frames = 70;
+    var step = target / frames;
+    function tick() {
+      current += step;
+      if (current >= target) {
+        counter.textContent = String(target);
+        return;
+      }
+      counter.textContent = String(Math.floor(current));
+      requestAnimationFrame(tick);
+    }
+    tick();
+  });
+}
+
+function refreshDashboard() {
+  telemetry.microplastics = Math.max(6, Math.min(58, Math.round(telemetry.microplastics + (Math.random() - 0.45) * 8)));
+  telemetry.turbidity = Math.max(0.7, Math.min(9.8, telemetry.turbidity + (Math.random() - 0.5) * 1.2));
+  telemetry.waterTemp = Math.max(18, Math.min(35, telemetry.waterTemp + (Math.random() - 0.5) * 2));
+  telemetry.tds = Math.max(80, Math.min(520, Math.round(telemetry.tds + (Math.random() - 0.5) * 36)));
+  telemetry.ph = Math.max(5.8, Math.min(8.8, telemetry.ph + (Math.random() - 0.5) * 0.28));
+  telemetry.size = Math.max(18, Math.min(180, Math.round(telemetry.size + (Math.random() - 0.45) * 26)));
+  telemetry.flow = Math.max(0.8, Math.min(3.8, telemetry.flow + (Math.random() - 0.5) * 0.28));
+  detectionFrequency = Math.max(3, Math.min(58, Math.round(detectionFrequency + (Math.random() - 0.42) * 8)));
+  sizeHistory.push(telemetry.size);
+  sizeHistory.shift();
+  frequencyHistory.push(detectionFrequency);
+  frequencyHistory.shift();
+  historicalTrend.push(telemetry.microplastics + Math.random() * 5);
+  historicalTrend.shift();
+  heatmapValues.push(Math.max(0.08, Math.min(0.95, telemetry.microplastics / 70 + Math.random() * 0.18)));
+  heatmapValues.shift();
+  renderHeatmap();
+  deployedDevices.forEach(function(device) {
+    if (Math.random() > 0.82 && device.status === "online") device.risk = device.risk === "warn" ? "safe" : "warn";
+  });
+  renderDeviceList();
+  renderDetectorMap();
+  document.getElementById("latencyValue").textContent = String(14 + Math.floor(Math.random() * 16)) + "ms";
+  updateTelemetryUI();
+  document.querySelectorAll(".metric-card").forEach(function(card, index) {
+    card.style.animation = "none";
+    card.offsetHeight;
+    card.style.animation = "riseIn 0.65s ease both";
+    card.style.animationDelay = String(index * 0.06) + "s";
+  });
+}
+
+function addSampleBurst() {
+  telemetry.microplastics = Math.min(72, telemetry.microplastics + 8 + Math.floor(Math.random() * 8));
+  for (var i = 0; i < 8; i++) {
+    particleHistory.push(Math.min(68, telemetry.microplastics + Math.random() * 8));
+    particleHistory.shift();
+    historicalTrend.push(Math.min(78, telemetry.microplastics + Math.random() * 10));
+    historicalTrend.shift();
+  }
+  heatmapValues.push(Math.min(0.95, telemetry.microplastics / 70 + 0.2));
+  heatmapValues.shift();
+  renderHeatmap();
+  updateTelemetryUI();
+}
+
+function setManualLocality() {
+  var value = document.getElementById("localityInput").value.trim();
+  document.getElementById("localityName").textContent = value || "Manual / not locked";
+}
+
+function weatherDescription(code) {
+  var map = {
+    0: "Clear sky",
+    1: "Mainly clear",
+    2: "Partly cloudy",
+    3: "Overcast",
+    45: "Fog",
+    48: "Depositing fog",
+    51: "Light drizzle",
+    53: "Moderate drizzle",
+    55: "Dense drizzle",
+    61: "Slight rain",
+    63: "Moderate rain",
+    65: "Heavy rain",
+    80: "Rain showers",
+    95: "Thunderstorm"
+  };
+  return map[code] || "Weather code " + code;
+}
+
+function updateWeatherPanel(current, latitude, longitude) {
+  var temp = Number(current.temperature_2m);
+  var humidity = Number(current.relative_humidity_2m);
+  var wind = Number(current.wind_speed_10m);
+  var rain = Number(current.precipitation || 0);
+  document.getElementById("weatherTemp").textContent = temp.toFixed(1);
+  document.getElementById("humidityValue").textContent = humidity.toFixed(0) + "%";
+  document.getElementById("windValue").textContent = wind.toFixed(1) + " km/h";
+  document.getElementById("weatherCondition").textContent = weatherDescription(current.weather_code);
+  document.getElementById("localityName").textContent = "GPS " + latitude.toFixed(3) + ", " + longitude.toFixed(3);
+  document.querySelector(".thermometer-box").style.setProperty("--temp-fill", Math.max(8, Math.min(92, ((temp + 5) / 50) * 100)) + "%");
+
+  var weatherAdvice = document.getElementById("weatherAdvice");
+  var weatherTag = document.getElementById("weatherTag");
+  if (temp > 34) {
+    weatherAdvice.textContent = "High heat around sample site";
+    weatherTag.textContent = "Hot";
+    weatherTag.className = "tag warn";
+  } else if (temp < 12) {
+    weatherAdvice.textContent = "Cold sample transport";
+    weatherTag.textContent = "Cold";
+    weatherTag.className = "tag warn";
+  } else {
+    weatherAdvice.textContent = "Temperature suitable for sampling";
+    weatherTag.textContent = "Stable";
+    weatherTag.className = "tag";
+  }
+
+  var rainAdvice = document.getElementById("rainAdvice");
+  var rainTag = document.getElementById("rainTag");
+  if (rain > 0) {
+    rainAdvice.textContent = "Rain detected near locality";
+    rainTag.textContent = "Runoff";
+    rainTag.className = "tag warn";
+  } else {
+    rainAdvice.textContent = "No current rainfall";
+    rainTag.textContent = "Clear";
+    rainTag.className = "tag";
+  }
+  document.getElementById("locationAdvice").textContent = "Location synced";
+}
+
+function requestWeather() {
+  if (!navigator.geolocation) {
+    document.getElementById("weatherCondition").textContent = "Geolocation not supported";
+    return;
+  }
+  document.getElementById("weatherCondition").textContent = "Requesting location permission";
+  navigator.geolocation.getCurrentPosition(function(position) {
+    var lat = position.coords.latitude;
+    var lon = position.coords.longitude;
+    var url = "https://api.open-meteo.com/v1/forecast?latitude=" + encodeURIComponent(lat) +
+      "&longitude=" + encodeURIComponent(lon) +
+      "&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&timezone=auto";
+    fetch(url)
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (!data.current) throw new Error("Weather unavailable");
+        updateWeatherPanel(data.current, lat, lon);
+      })
+      .catch(function() {
+        document.getElementById("weatherCondition").textContent = "Weather sync failed";
+      });
+  }, function() {
+    document.getElementById("weatherCondition").textContent = "Location permission not granted";
+  }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
+}
+
+function getConnectionEstimate() {
+  var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (connection && connection.downlink) {
+    return Number(connection.downlink);
+  }
+  return 0;
+}
+
+function setSpeed(speed, note) {
+  currentSpeed = Math.max(0, Math.min(1000, speed));
+  document.getElementById("speedValue").textContent = currentSpeed ? currentSpeed.toFixed(currentSpeed >= 10 ? 1 : 2) : "--";
+  document.getElementById("speedNote").textContent = note;
+  drawSpeedMeter(currentSpeed);
+}
+
+function runSpeedEstimate() {
+  var browserEstimate = getConnectionEstimate();
+  if (location.protocol === "file:") {
+    if (browserEstimate) {
+      setSpeed(browserEstimate, "Browser connection estimate. Host the page online for a timed dashboard download check.");
+    } else {
+      setSpeed(18 + Math.random() * 42, "Demo estimate because local files cannot measure internet download speed reliably.");
+    }
+    return;
+  }
+
+  var start = performance.now();
+  fetch(location.href.split("#")[0] + "?speedCheck=" + Date.now(), { cache: "no-store" })
+    .then(function(response) { return response.blob(); })
+    .then(function(blob) {
+      var seconds = Math.max(0.001, (performance.now() - start) / 1000);
+      var mbps = (blob.size * 8) / seconds / 1000000;
+      if (browserEstimate) mbps = Math.max(mbps, browserEstimate);
+      setSpeed(mbps, "Estimated from this dashboard download plus browser network information when available.");
+    })
+    .catch(function() {
+      if (browserEstimate) {
+        setSpeed(browserEstimate, "Browser connection estimate. Timed download check failed.");
+      } else {
+        setSpeed(0, "Speed check unavailable in this browser.");
+      }
+    });
+}
+
+seedParticleHistory();
+resizeParticleChart();
+resizeMonitoringCharts();
+renderHeatmap();
+renderDeviceList();
+renderDetectorMap();
+drawParticleChart();
+drawMonitoringCharts();
+drawSafeMeter();
+drawSpeedMeter(currentSpeed);
+animateCounters();
+updateTelemetryUI();
+runSpeedEstimate();
+// The simulated loop is commented out to allow the Web Worker to handle real-time data
+// setInterval(refreshDashboard, 5200); 
+
+// --- SUPABASE & WORKER INTEGRATION ---
+let worker;
+if (window.Worker) {
+  worker = new Worker('worker.js');
+  
+  worker.onmessage = function(e) {
+    if (e.data.type === 'telemetry') {
+      // Update telemetry with live data from Supabase
+      Object.assign(telemetry, e.data.payload);
+      
+      // Update historical arrays for charts
+      sizeHistory.push(telemetry.size);
+      sizeHistory.shift();
+      frequencyHistory.push(detectionFrequency);
+      frequencyHistory.shift();
+      historicalTrend.push(telemetry.microplastics + Math.random() * 5);
+      historicalTrend.shift();
+      heatmapValues.push(Math.max(0.08, Math.min(0.95, telemetry.microplastics / 70 + Math.random() * 0.18)));
+      heatmapValues.shift();
+      
+      renderHeatmap();
+      updateTelemetryUI();
+      
+      // Visual feedback for metrics update
+      document.querySelectorAll(".metric-card").forEach(function(card, index) {
+        card.style.animation = "none";
+        card.offsetHeight;
+        card.style.animation = "riseIn 0.65s ease both";
+        card.style.animationDelay = String(index * 0.06) + "s";
+      });
+      
+    } else if (e.data.type === 'device_status') {
+      // Update deployed devices status based on worker payload
+      // In a real scenario, merge e.data.payload into deployedDevices array
+      // deployedDevices = e.data.payload;
+      // renderDeviceList();
+      // renderDetectorMap();
+    }
+  };
+}
+
+async function exportToCsv() {
+  // IMPORTANT: Replace with your actual Supabase URL and Anon Key
+  const supabaseUrl = 'https://lxeysecudqdlxnssuzml.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4ZXlzZWN1ZHFkbHhuc3N1em1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNzM5OTQsImV4cCI6MjA5Mjk0OTk5NH0.lLFUCAUa-sf8gdN8kZm-ucoN575q7k414SUXe-X2SKQ';
+  
+  if (supabaseUrl === 'YOUR_SUPABASE_URL') {
+    showToast("Configuration Needed", "Please enter your Supabase credentials in dashboard.html and worker.js to use this feature.", "warn");
+    return;
+  }
+  
+  try {
+    showToast("Exporting", "Fetching historical data from Supabase...", "warn");
+    
+    // Replace 'telemetry' with your actual table name
+    const { data, error } = await supabase
+      .from('telemetry')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1000);
+      
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      showToast("Export Failed", "No data found to export.", "bad");
+      return;
+    }
+    
+    // Convert JSON to CSV format
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => headers.map(header => row[header]).join(','))
+    ].join('\n');
+    
+    // Create temporary link and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "aquatrace_export_" + Date.now() + ".csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast("Export Complete", "CSV file has been downloaded successfully.", "");
+  } catch (err) {
+    console.error(err);
+    showToast("Export Error", "Failed to connect or fetch data from Supabase.", "bad");
+  }
+}
+</script>
+</body>
+</html>
