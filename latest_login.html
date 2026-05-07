@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AquaTrace</title>
+  <style>
+    /* ‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê
+   THEME VARIABLES
+‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê */
+    :root,
+    [data-theme="dark"] {
+      --bg-page: #0f0e0c;
+      --bg-panel: rgba(18, 16, 11, 0.93);
+      --bg-input: #0d0c08;
+      --bg-role-active: #2a2016;
+      --bg-role-admin: #2a1e08;
+      --bg-role-inact: #1a1610;
+      --bg-reg-hover: #0d2016;
+
+      --border-main: #3a2e18;
+
+      --text-logo: #e6a820;
+      --text-logo-sub: #8a7a5a;
+      --text-sub: #5a5040;
+      --text-label: #7a6840;
+      --text-input: #d4a830;
+      --text-input-reg: #7adda0;
+      --text-link: #4a4030;
+      --text-link-reg: #4a7055;
+      --text-divider: #4a3a20;
+      --text-footer: #3a3028;
+      --text-reg-note: #3a5040;
+      --text-reg-head: #4a7055;
+      --text-reg-title: #5aaa6a;
+
+      --divider-bg: #12100b;
+      --logo-circle: #0f0e0c;
+
+      --section-line: #2a2016;
+      --section-line-r: #1a2e1a;
+
+      --select-bg: #0d0c08;
+      --select-color: #7adda0;
+
+      --toggle-bg: #1a1610;
+      --toggle-border: #3a2e18;
+      --toggle-icon: #c8901a;
+      --toggle-hover: #2a2016;
+      --toggle-text: #8a7850;
+    }
+
+    [data-theme="light"] {
+      --bg-page: #ddd4be;
+      --bg-panel: rgba(248, 241, 226, 0.97);
+      --bg-input: #f2e8d6;
+      --bg-role-active: #edd9a8;
+      --bg-role-admin: #f0e0b0;
+      --bg-role-inact: #e4d8c0;
+      --bg-reg-hover: #d0ead8;
+
+      --border-main: #b89050;
+
+      --text-logo: #7a5008;
+      --text-logo-sub: #6a5828;
+      --text-sub: #7a6438;
+      --text-label: #6a5220;
+      --text-input: #4a3208;
+      --text-input-reg: #185a30;
+      --text-link: #7a6840;
+      --text-link-reg: #206038;
+      --text-divider: #8a6830;
+      --text-footer: #907840;
+      --text-reg-note: #306040;
+      --text-reg-head: #206040;
+      --text-reg-title: #107030;
+
+      --divider-bg: #ecdcb8;
+      --logo-circle: #ddd4be;
+
+      --section-line: #c8a860;
+      --section-line-r: #80b888;
+
+      --select-bg: #f2e8d6;
+      --select-color: #185a30;
+
+      --toggle-bg: #ecdcb8;
+      --toggle-border: #b89050;
+      --toggle-icon: #7a5008;
+      --toggle-hover: #e0d0a8;
+      --toggle-text: #6a5828;
+    }
+
+    /* ‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê
+   BASE
+‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê */
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      transition: background 0.4s;
+    }
+
+    body {
+      background: var(--bg-page);
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      transition: background 0.4s ease;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê
+   THEME TOGGLE
+‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê */
+    #themeToggle {
+      position: fixed;
+      top: 18px;
+      right: 20px;
+      z-index: 200;
+      background: var(--toggle-bg);
+      border: 1px solid var(--toggle-border);
+      border-radius: 20px;
+      padding: 7px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--toggle-icon);
+      transition: background 0.3s, border-color 0.3s, color 0.3s;
+      user-select: none;
+    }
+
+    #themeToggle:hover {
+      background: var(--toggle-hover);
+    }
+
+    #themeToggle .t-icon {
+      font-size: 15px;
+      transition: transform 0.6s ease;
+      display: inline-block;
+    }
+
+    #themeToggle:hover .t-icon {
+      transform: rotate(30deg);
+    }
+
+    #themeToggle .t-label {
+      color: var(--toggle-text);
+      font-size: 10px;
+    }
+
+    /* ‚??‚?? TRACK / PILL ‚??‚?? */
+    .t-track {
+      width: 34px;
+      height: 18px;
+      background: var(--toggle-border);
+      border-radius: 9px;
+      position: relative;
+      transition: background 0.3s;
+      flex-shrink: 0;
+    }
+
+    .t-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--toggle-icon);
+      transition: left 0.3s ease, background 0.3s;
+    }
+
+    [data-theme="light"] .t-thumb {
+      left: 19px;
+    }
+
+    /* ‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê
+   APP LAYOUT
+‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê */
+    #app {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      gap: 0;
+      max-width: 420px;
+      width: 95%;
+      transition: max-width 0.5s ease;
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-main);
+      border-radius: 4px;
+      padding: 32px 28px;
+      flex: 1;
+      transition: background 0.4s ease, border-color 0.4s ease;
+    }
+
+    /* ‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê
+   LOGO
+‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê */
+    .logo-wrap {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .logo-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-logo);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      transition: color 0.4s;
+    }
+
+    .logo-title span {
+      color: var(--text-logo-sub);
+      transition: color 0.4s;
+    }
+
+    .logo-sub {
+      font-size: 9px;
+      color: var(--text-sub);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 4px;
+      transition: color 0.4s;
+    }
+
+    /* ‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê
+   FIELDS
+‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê */
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 10px;
+      color: var(--text-label);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      transition: color 0.4s;
+    }
+
+    .field input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-main);
+      border-radius: 2px;
+      color: var(--text-input);
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      padding: 12px 12px;
+      outline: none;
+      letter-spacing: 1px;
+      transition: border-color 0.2s, background 0.4s, color 0.4s;
+      text-align: center;
+    }
+
+    .field input:focus {
+      border-color: var(--text-logo);
+    }
+
+    .form-alert {
+      display: none;
+      margin: -2px 0 12px;
+      font-size: 10px;
+      line-height: 1.5;
+      letter-spacing: 1px;
+      color: #d08a40;
+      text-align: center;
+    }
+
+    .form-alert.show {
+      display: block;
+    }
+
+    .form-alert.success {
+      color: #5aaa6a;
+    }
+
+    /* ‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê
+   BUTTONS
+‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê */
+    .btn-login {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 2px;
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      margin-bottom: 14px;
+    }
+
+    .btn-login:hover {
+      opacity: 0.85;
+    }
+
+    .btn-user-color {
+      background: linear-gradient(135deg, #7a4e0a, #c8901a);
+    }
+
+    /* ‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê
+   LINKS + FOOTER
+‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê‚?ê */
+    .links-row {
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
+    }
+
+    .links-row a {
+      font-size: 10px;
+      color: var(--text-link);
+      letter-spacing: 1px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .links-row a:hover {
+      color: var(--text-logo);
+    }
+
+    .sys-footer {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      margin-top: 14px;
+      font-size: 9px;
+      color: var(--text-footer);
+      letter-spacing: 2px;
+      transition: color 0.4s;
+    }
+  </style>
+</head>
+
+<body>
+
+  <canvas id="bgCanvas"></canvas>
+
+  <!-- THEME TOGGLE -->
+  <button id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+    <span class="t-icon" id="themeIcon">‚?Ω</span>
+    <div class="t-track">
+      <div class="t-thumb"></div>
+    </div>
+    <span class="t-label" id="themeLabel">Dark</span>
+  </button>
+
+  <div id="app">
+    <!-- ‚?ê‚?ê‚?ê LOGIN PANEL ‚?ê‚?ê‚?ê -->
+    <div class="panel" id="loginPanel">
+      <div class="logo-wrap">
+        <div style="margin-bottom:6px;">
+          <svg width="32" height="32" viewBox="0 0 36 36" style="vertical-align:middle;margin-right:8px;">
+            <path d="M18 2l3.5 6h7l-5.5 4 2 7-7-4.5L11 19l2-7L7.5 8h7z" fill="#c8901a" stroke="#e6a820"
+              stroke-width="0.5" />
+            <circle cx="18" cy="13" r="3" id="logoCircle" fill="#0f0e0c" />
+          </svg>
+          <span class="logo-title">Aqua<span>Trace</span></span>
+        </div>
+        <div class="logo-sub">Passwordless Secure Access</div>
+        <div style="font-size: 10px; color: var(--text-sub); margin-top: 15px; letter-spacing: 1px;">
+          Enter your email to receive a secure login link. No registration required.
+        </div>
+      </div>
+
+      <div id="userFields">
+        <div class="field"><input type="email" id="loginEmail" placeholder="user@domain.com" /></div>
+        <div class="form-alert" id="loginAlert"></div>
+      </div>
+
+      <button class="btn-login btn-user-color" id="loginBtn" onclick="handleLogin(event)">&#9135;&#9135; Send Access
+        Link &#9135;&#9135;</button>
+
+      <div class="links-row">
+        <a href="index.html">‚?ê Back to Home</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="sys-footer">&#9135; SYSTEM v2.4.1 &#9135; SECURED CHANNEL &#9135;</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // --- SUPABASE CONFIG ---
+    const SUPABASE_URL = 'https://lxeysecudqdlxnssuzml.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4ZXlzZWN1ZHFkbHhuc3N1em1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNzM5OTQsImV4cCI6MjA5Mjk0OTk5NH0.lLFUCAUa-sf8gdN8kZm-ucoN575q7k414SUXe-X2SKQ';
+
+    let supabase;
+    try {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      // Check if logged in
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) window.location.href = 'dashboard.html';
+      });
+    } catch (e) {
+      console.warn("Supabase failed. If file://, auth won't work.", e);
+    }
+
+    // --- MAGIC LINK LOGIN LOGIC ---
+    async function handleLogin() {
+      try {
+        const email = document.getElementById('loginEmail').value;
+        const alertBox = document.getElementById('loginAlert');
+
+        if (!email || !email.includes('@')) {
+          alertBox.className = 'form-alert show';
+          alertBox.textContent = 'Please enter a valid email address.';
+          return;
+        }
+
+        alertBox.className = 'form-alert show success';
+        alertBox.textContent = 'Preparing secure link...';
+
+        if (!supabase) {
+          alertBox.className = 'form-alert show';
+          alertBox.textContent = 'Auth service disconnected (deploy to Cloudflare).';
+          return;
+        }
+
+        const { error } = await supabase.auth.signInWithOtp({
+          email: email
+        });
+
+        if (error) {
+          alertBox.className = 'form-alert show';
+          alertBox.textContent = error.message;
+        } else {
+          alertBox.className = 'form-alert show success';
+          alertBox.textContent = 'Access link sent! Please check your inbox and click the link to log in.';
+        }
+      } catch (err) {
+        alert("An unexpected error occurred: " + err.message);
+      }
+    }
+
+
+    // --- UI LOGIC ---
+    var theme = localStorage.getItem("theme") || "dark";
+    var gearColor, screwColor, gearAlpha, screwAlpha;
+
+    function applyTheme(mode) {
+      document.documentElement.setAttribute('data-theme', mode);
+      document.getElementById('themeIcon').textContent = mode === 'dark' ? '‚?Ω' : '‚??';
+      document.getElementById('themeLabel').textContent = mode === 'dark' ? 'Dark' : 'Light';
+      var logo = document.getElementById('logoCircle');
+      if (logo) logo.setAttribute('fill', mode === 'dark' ? '#0f0e0c' : '#ddd4be');
+      gearColor = mode === 'dark' ? '#c8901a' : '#7a5008';
+      screwColor = mode === 'dark' ? '#8a7a5a' : '#9a7830';
+      gearAlpha = mode === 'dark' ? 0.18 : 0.20;
+      screwAlpha = mode === 'dark' ? 0.25 : 0.28;
+    }
+
+    function toggleTheme() {
+      theme = theme === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('theme', theme);
+      applyTheme(theme);
+    }
+    applyTheme(theme);
+
+    // --- CANVAS LOGIC ---
+    var canvas = document.getElementById('bgCanvas');
+    var ctx = canvas.getContext('2d');
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; initEl(); }
+
+    function drawGear(x, y, oR, iR, teeth, angle) {
+      ctx.save(); ctx.globalAlpha = gearAlpha; ctx.translate(x, y); ctx.rotate(angle);
+      var tw = (2 * Math.PI / teeth) * 0.32;
+      ctx.beginPath();
+      for (var i = 0; i < teeth; i++) {
+        var a = (i / teeth) * Math.PI * 2;
+        ctx.lineTo(Math.cos(a - tw) * iR, Math.sin(a - tw) * iR);
+        ctx.lineTo(Math.cos(a - tw) * oR, Math.sin(a - tw) * oR);
+        ctx.lineTo(Math.cos(a + tw) * oR, Math.sin(a + tw) * oR);
+        ctx.lineTo(Math.cos(a + tw) * iR, Math.sin(a + tw) * iR);
+      }
+      ctx.closePath(); ctx.strokeStyle = gearColor; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, iR * 0.55, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, iR * 0.18, 0, Math.PI * 2);
+      ctx.fillStyle = gearColor; ctx.fill(); ctx.restore();
+    }
+
+    function drawScrew(x, y, r, angle) {
+      ctx.save(); ctx.globalAlpha = screwAlpha; ctx.translate(x, y); ctx.rotate(angle);
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.strokeStyle = screwColor; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(-r * 0.65, 0); ctx.lineTo(r * 0.65, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -r * 0.65); ctx.lineTo(0, r * 0.65); ctx.stroke();
+      ctx.restore();
+    }
+
+    var elements = [];
+    function initEl() {
+      var W = canvas.width, H = canvas.height;
+      elements = [];
+      var gears = [
+        [0.03, 0.10, 75, 56, 12, 0.003, 1], [0.18, 0.25, 44, 32, 8, 0.005, -1],
+        [0.87, 0.07, 82, 62, 14, 0.002, 1], [0.74, 0.20, 52, 38, 10, 0.004, -1],
+        [0.93, 0.55, 68, 50, 12, 0.0035, 1], [0.03, 0.68, 58, 42, 10, 0.004, -1],
+        [0.14, 0.88, 72, 54, 12, 0.003, 1], [0.82, 0.83, 62, 46, 10, 0.0045, -1],
+        [0.50, 0.05, 36, 26, 8, 0.006, 1], [0.50, 0.95, 46, 34, 9, 0.005, -1],
+        [0.62, 0.75, 40, 28, 8, 0.0055, 1], [0.28, 0.60, 34, 24, 7, 0.007, -1],
+      ];
+      gears.forEach(function (g) {
+        elements.push({ type: 'gear', x: g[0] * W, y: g[1] * H, oR: g[2], iR: g[3], t: g[4], spd: g[5] * g[6], angle: Math.random() * Math.PI * 2 });
+      });
+      var screws = [
+        [0.28, 0.08], [0.62, 0.12], [0.40, 0.92], [0.70, 0.88], [0.96, 0.35], [0.02, 0.45],
+        [0.35, 0.97], [0.65, 0.03], [0.12, 0.52], [0.88, 0.68], [0.22, 0.72], [0.78, 0.42],
+        [0.44, 0.18], [0.90, 0.15], [0.55, 0.35], [0.07, 0.32], [0.95, 0.80], [0.48, 0.78],
+      ];
+      screws.forEach(function (s) {
+        var r = 8 + Math.random() * 10;
+        elements.push({
+          type: 'screw', x: s[0] * W, baseY: s[1] * H, r: r,
+          angle: Math.random() * Math.PI * 2, spd: (Math.random() - 0.5) * 0.025,
+          driftY: Math.random() * Math.PI * 2, driftSpd: 0.005 + Math.random() * 0.012
+        });
+      });
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+
+    function loop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      elements.forEach(function (el) {
+        if (el.type === 'gear') {
+          el.angle += el.spd;
+          drawGear(el.x, el.y, el.oR, el.iR, el.t, el.angle);
+        } else {
+          el.angle += el.spd;
+          el.driftY += el.driftSpd;
+          drawScrew(el.x, el.baseY + Math.sin(el.driftY) * 7, el.r, el.angle);
+        }
+      });
+      requestAnimationFrame(loop);
+    }
+    loop();
+  </script>
+</body>
+
+</html>

@@ -457,6 +457,12 @@ input {
   transform: translateY(-2px);
 }
 
+.action-btn:disabled {
+  cursor: wait;
+  opacity: 0.62;
+  transform: none;
+}
+
 .dot {
   width: 8px;
   height: 8px;
@@ -1546,7 +1552,7 @@ input {
       </div>
       <div class="top-actions">
         <div class="status-pill"><span class="dot" id="statusDot"></span><span id="systemStatus">Water currently safe</span></div>
-        <button class="action-btn" type="button" onclick="refreshDashboard()">Sync Device</button>
+        <button class="action-btn" type="button" id="startTestingBtn" onclick="startTesting()">Start Testing</button>
         <button class="action-btn" type="button" id="exportCsvBtn" onclick="exportToCsv()">Export CSV</button>
         <button class="action-btn" type="button" onclick="goHome()">Home</button>
       </div>
@@ -1864,6 +1870,7 @@ input {
 // --- SUPABASE DATA CLIENT ---
 const SUPABASE_URL = 'https://lxeysecudqdlxnssuzml.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4ZXlzZWN1ZHFkbHhuc3N1em1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNzM5OTQsImV4cCI6MjA5Mjk0OTk5NH0.lLFUCAUa-sf8gdN8kZm-ucoN575q7k414SUXe-X2SKQ';
+const DEVICE_ID = 'AQT-MP-01';
 let supabase;
 try {
   supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1903,6 +1910,10 @@ var alertRules = {
 };
 
 var lastThresholdAlertAt = 0;
+var testCommandPending = false;
+var testCommandStartedAt = 0;
+var testCommandTimeout = null;
+var testResultPollInterval = null;
 var detectionFrequency = 21;
 var sizeHistory = [];
 var frequencyHistory = [];
@@ -2397,6 +2408,101 @@ function updateTelemetryUI() {
   evaluateThresholdAlerts(false);
 }
 
+function setTestingButton(isTesting) {
+  var button = document.getElementById("startTestingBtn");
+  if (!button) return;
+  button.disabled = isTesting;
+  button.textContent = isTesting ? "Testing..." : "Start Testing";
+}
+
+function finishPendingTest(message, type) {
+  if (!testCommandPending) return;
+  testCommandPending = false;
+  if (testCommandTimeout) {
+    clearTimeout(testCommandTimeout);
+    testCommandTimeout = null;
+  }
+  if (testResultPollInterval) {
+    clearInterval(testResultPollInterval);
+    testResultPollInterval = null;
+  }
+  setTestingButton(false);
+  document.getElementById("deviceMode").textContent = "Sampling";
+  showToast("Result Received", message || "New ESP32 reading updated the dashboard.", type || "");
+}
+
+async function pollForTestResult() {
+  if (!testCommandPending || !supabase) return;
+
+  try {
+    var result = await supabase
+      .from("telemetry")
+      .select("*")
+      .eq("device_id", DEVICE_ID)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (result.error || !result.data || !result.data.length) return;
+
+    var latest = Object.assign({}, result.data[0]);
+    var createdAt = latest.created_at ? Date.parse(latest.created_at) : Date.now();
+    if (createdAt < testCommandStartedAt - 3000) return;
+
+    if (latest.watertemp !== undefined) {
+      latest.waterTemp = Number(latest.watertemp);
+    }
+    Object.assign(telemetry, latest);
+    updateTelemetryUI();
+    finishPendingTest("New ESP32 reading updated the dashboard.", "");
+  } catch (err) {
+    console.warn("Telemetry polling failed", err);
+  }
+}
+
+async function startTesting() {
+  if (!supabase) {
+    showToast("Device Command Failed", "Supabase is not available on this page.", "bad");
+    return;
+  }
+
+  testCommandPending = true;
+  testCommandStartedAt = Date.now();
+  setTestingButton(true);
+  document.getElementById("deviceMode").textContent = "Command queued";
+
+  try {
+    var result = await supabase
+      .from("device_commands")
+      .insert([{
+        device_id: DEVICE_ID,
+        command: "start_testing",
+        status: "pending"
+      }]);
+
+    if (result.error) throw result.error;
+
+    showToast("Testing Started", "Command sent to " + DEVICE_ID + ". Waiting for telemetry.", "warn");
+    testResultPollInterval = setInterval(pollForTestResult, 2000);
+    testCommandTimeout = setTimeout(function() {
+      if (!testCommandPending) return;
+      testCommandPending = false;
+      if (testResultPollInterval) {
+        clearInterval(testResultPollInterval);
+        testResultPollInterval = null;
+      }
+      setTestingButton(false);
+      document.getElementById("deviceMode").textContent = "Waiting";
+      showToast("Testing Timeout", "No ESP32 result arrived within 25 seconds. Check power, Wi-Fi, and Supabase policies.", "bad");
+    }, 25000);
+  } catch (err) {
+    console.error(err);
+    testCommandPending = false;
+    setTestingButton(false);
+    document.getElementById("deviceMode").textContent = "Command failed";
+    showToast("Device Command Failed", err.message || "Could not create the start command.", "bad");
+  }
+}
+
 function showToast(title, message, type) {
   var stack = document.getElementById("toastStack");
   var toast = document.createElement("div");
@@ -2786,7 +2892,14 @@ if (window.Worker) {
   worker.onmessage = function(e) {
     if (e.data.type === 'telemetry') {
       // Update telemetry with live data from Supabase
-      Object.assign(telemetry, e.data.payload);
+      const incomingTelemetry = Object.assign({}, e.data.payload);
+      if (incomingTelemetry.watertemp !== undefined) {
+        incomingTelemetry.waterTemp = Number(incomingTelemetry.watertemp);
+      }
+      Object.assign(telemetry, incomingTelemetry);
+      if (!incomingTelemetry.device_id || incomingTelemetry.device_id === DEVICE_ID) {
+        finishPendingTest("New ESP32 reading updated the dashboard.", "");
+      }
       
       // Update historical arrays for charts
       sizeHistory.push(telemetry.size);
